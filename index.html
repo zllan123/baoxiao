@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="CAFWNETpHEqumSc3Xk7YZw">
+<head data-page-node-id="0x136e9bZuM7oaWG21zl0n">
+<meta charset="UTF-8" data-page-node-id="ubVMnYbbWX2gmSJfB9MRWj" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" data-page-node-id="vra1gmuji7rcSo4pCuwLuW" />
+<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="xdPUdtf2dj5fFFTwgZJ5Sl" />
+<meta name="mobile-web-app-capable" content="yes" data-page-node-id="00vtx5CKJzODKSJaAqFgwr" />
+  <title>报销</title>
+  <meta name="theme-color" content="#e86a9f" />
+  <!-- 识别/导出组件已本地化：与 index.html 同目录的 assets/，完全不依赖外部 CDN（稳定、可长期使用） -->
+  <script src="./assets/tesseract.min.js"></script>
+  <script src="./assets/exceljs.min.js"></script>
+<style>
+  :root{
+    --bg:#fdeef4; --card:#fffafc; --line:#f4d3e1; --text:#4a2738; --sub:#a06b82;
+    --brand:#e86a9f; --ok:#1f9d57; --warn:#e08600; --danger:#e23b3b;
+    --shua:#cf4f93; --chip:#fbe0ec;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:15px; -webkit-text-size-adjust:100%;}
+  .app{max-width:540px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;}
+  header{position:sticky; top:0; z-index:20; background:#fff; border-bottom:1px solid var(--line);
+    padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;}
+  .title{font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .title .dot{width:9px; height:9px; border-radius:50%; background:var(--ok);}
+  .status{font-size:11px; color:var(--sub); margin-top:2px;}
+  .tabs{display:flex; gap:8px; margin-top:10px;}
+  .tab{flex:1; text-align:center; padding:9px 0; border-radius:10px; font-weight:600;
+    background:var(--bg); color:var(--sub); border:1px solid transparent;}
+  .tab.active{background:var(--chip); color:var(--brand); border-color:#cfe0ff;}
+  .tab.shua.active{background:#f9d6e7; color:var(--shua); border-color:#eebcdb;}
+  main{flex:1; padding:12px 12px 90px; display:flex; flex-direction:column; gap:12px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;}
+  .btn{border:none; border-radius:11px; padding:12px 14px; font-size:15px; font-weight:600;
+    background:var(--brand); color:#fff; width:100%; cursor:pointer;}
+  .btn.shua{background:var(--shua);}
+  .btn.ghost{background:var(--bg); color:var(--text); border:1px solid var(--line);}
+  .btn.sm{padding:8px 10px; font-size:13px; width:auto;}
+  .hint{font-size:12px; color:var(--sub); margin-top:8px; line-height:1.55;}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;}
+  .slot{position:relative; aspect-ratio:3/4; background:var(--bg); border:1px dashed var(--line);
+    border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center;
+    color:var(--sub); font-size:12px; text-align:center; padding:4px;}
+  .slot img{width:100%; height:100%; object-fit:cover;}
+  .slot .x{position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
+    background:rgba(0,0,0,.55); color:#fff; font-size:13px; line-height:20px; text-align:center;}
+  .slot .badge{position:absolute; left:3px; bottom:3px; background:rgba(0,0,0,.6); color:#fff;
+    font-size:10px; padding:1px 5px; border-radius:6px; max-width:92%; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;}
+  table{width:100%; border-collapse:collapse; font-size:13px; margin-top:6px;}
+  th,td{border:1px solid var(--line); padding:7px 6px; text-align:left; vertical-align:top;}
+  th{background:var(--bg); color:var(--sub); font-weight:600;}
+  td input,td select{width:100%; border:none; background:transparent; font-size:13px; color:var(--text);
+    outline:none; padding:2px 0;}
+  td .shotimg{width:100%; height:auto; display:block; border-radius:6px; cursor:zoom-in;}
+  td .tline{font-size:11px; color:var(--sub); margin-top:2px;}
+  .amt{font-variant-numeric:tabular-nums; font-weight:600;}
+  .del{color:var(--danger); font-size:12px; cursor:pointer; padding:4px;}
+  .bar{position:fixed; display:flex; gap:8px; padding:10px 12px;
+    padding-bottom:calc(env(safe-area-inset-bottom) + 10px);
+    background:#fff; border-top:1px solid var(--line); bottom:0; left:0; right:0;
+    max-width:540px; margin:0 auto;}
+  .toast{position:fixed; left:50%; top:30%; transform:translateX(-50%); background:rgba(0,0,0,.82);
+    color:#fff; font-size:13px; padding:10px 16px; border-radius:10px; z-index:50; opacity:0;
+    transition:opacity .2s; pointer-events:none; max-width:80%; text-align:center;}
+  .toast.show{opacity:1;}
+  .ocrbar{font-size:11px; color:var(--brand); margin-top:6px; min-height:14px;}
+  .sec-title{font-weight:700; font-size:14px; margin:2px 0 2px;}
+  .badge-n{display:inline-block; background:var(--chip); color:var(--brand); font-size:11px;
+    border-radius:6px; padding:1px 6px; margin-left:6px;}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:60; display:none;
+    align-items:center; justify-content:center; padding:16px;}
+  .modal.show{display:flex;}
+  .modal .box{background:#fff; border-radius:14px; max-width:520px; width:100%; max-height:78vh;
+    overflow:auto; padding:14px;}
+  .modal pre{white-space:pre-wrap; word-break:break-all; font-size:12px; line-height:1.5; margin:8px 0 0;}
+  /* 截图点击放大灯箱：全屏黑底看大图，可双指缩放，点空白关闭，不跳出微信 */
+  .lightbox{position:fixed; inset:0; background:rgba(0,0,0,.94); z-index:80; display:none;
+    align-items:center; justify-content:center; padding:0;}
+  .lightbox.show{display:flex;}
+  .lightbox img{max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;
+    -webkit-user-select:none; user-select:none; touch-action:pinch-zoom; -webkit-touch-callout:none;}
+  .lightbox .lbclose{position:absolute; top:calc(env(safe-area-inset-top) + 12px); right:14px;
+    width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.18); color:#fff;
+    font-size:20px; line-height:40px; text-align:center; z-index:2;}
+  .lightbox .lbtip{position:absolute; left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 14px);
+    text-align:center; color:rgba(255,255,255,.7); font-size:12px;}
+  .dev-sign{margin-left:8px; align-self:center; font-size:11px; color:#c76a9a; letter-spacing:.2px; white-space:nowrap;}
+</style>
+</head>
+<body data-page-node-id="c0IRDlo45W32pRoV7zTD5H">
+<div class="app" data-page-node-id="QNbWvWUN7Kb91kp9EVvpAT">
+  <header data-page-node-id="t06sLtkGx21JN04bzXjqPb">
+    <div class="title" data-page-node-id="v4EJs5vePWCTd3zY34iwdW"><span class="dot" id="engineDot" data-page-node-id="UJBJgoQsiwZvGxoU6GGiDC"></span>报销</div>
+    <div class="status" id="engineStatus" data-page-node-id="hnSmbnQOE9e1zsUtNPg48g">识别引擎：加载中…（首次需联网）</div>
+    <div class="tabs" data-page-node-id="6eZYVTyltugcBYUADFJAmv">
+      <div class="tab active" id="tabDaily" onclick="switchTab('daily')" data-page-node-id="RGI5ZPNL0LVs25MNVFHUeK">日常报销</div>
+      <div class="tab shua" id="tabShua" onclick="switchTab('shua')" data-page-node-id="gajvHJpyBzk5wbp7UgP5An">刷单报销</div>
+    </div>
+  </header>
+
+  <main data-page-node-id="2QRDLfkDkAJzDvhfJHusy7">
+    <!-- 日常 -->
+    <section id="secDaily" data-page-node-id="XECKMc5sv3MVC7AEHe9EKM">
+      <div class="card" data-page-node-id="CyfSDBJGWZPD9r8Kt4WbIR">
+        <div class="sec-title" data-page-node-id="m4eJXNU8e88dfnhDUia5OC">日常报销截图上传 <span class="badge-n" id="dailyCount" data-page-node-id="5Lv1AVYP9pFcmxfx5XbN13">0/20</span></div>
+        <button class="btn" id="btnDaily" onclick="pickImage('daily')" data-page-node-id="S9gOJqbrLZcr2NibALbMAU">＋ 日常报销截图上传</button>
+        <div class="grid" id="gridDaily" data-page-node-id="kjocElgYaDVe9EnrLOA3Z6"></div>
+        <div class="ocrbar" id="ocrDaily" data-page-node-id="4zbF2Aeuje3kc6Hkz8hdik"></div>
+        <div class="hint" data-page-node-id="2ZcHIWglEAPKga2oXtLRTu">识别未必 100% 准确，请逐行核对修正。截图位上限20张，不能超过。</div>
+      </div>
+      <div class="card" data-page-node-id="VYGNgMMnUfNJSCBHvZqUMu">
+        <div class="sec-title" data-page-node-id="zaIDqUpjniTWd5rNmbCP9o">报销明细</div>
+        <table data-page-node-id="vuFhkp0OI9jsVEQG8Q3AW3">
+          <thead data-page-node-id="H9dgD8FZBtBjqBBBVpc7NG">
+            <tr data-page-node-id="RhB7jhHXQnCGXTOaVOgRVv"><th data-page-node-id="FYpZlkCkgselWTMBTA10d7">序号</th><th data-page-node-id="xjGy60ApFKFknTFKxgkpB2">截图合规校验<br data-page-node-id="hyrVjWZkaoUcIXDtN4auMz">(金额/时间/数量)</th><th data-page-node-id="3FXf4leDfCVvwBCR9ZHjiO">付款金额(¥)</th><th data-page-node-id="Pc47ClAbRH9uapt8haiGrw">报销明细</th><th data-page-node-id="SCD1wBrFEJAsOg6TlYoMaE">是否开票</th><th data-page-node-id="n1L8xm61vRq5lPWI4urmhq">备注</th><th data-page-node-id="v0XERcgQR47zLAX86UeHK0"></th></tr>
+          </thead>
+          <tbody id="bodyDaily" data-page-node-id="4LUCbikpwJ7XCZh9mK5Cn2"></tbody>
+        </table>
+        <div style="margin-top:8px;" data-page-node-id="wQKt5vEG8JGMv1AHrnd1Mw"><button class="btn ghost sm" onclick="addRow('daily')" data-page-node-id="RnLk7D8N1WG9mUREbm4jUF">＋ 手动加一行</button></div>
+      </div>
+    </section>
+
+    <!-- 刷单 -->
+    <section id="secShua" style="display:none" data-page-node-id="L1ZIEMB7Jv2CWfeDNTZba6">
+      <div class="card" data-page-node-id="UdKF58JB2uZ5p2A6gtnB5v">
+        <div class="sec-title" data-page-node-id="ioFI5YnFIYyTzzPzhVD6tZ">刷单报销截图上传 <span class="badge-n" id="shuaCount" data-page-node-id="yar7LbPB2ihRVvPCSfurja">0/20</span></div>
+        <button class="btn shua" id="btnShua" onclick="pickImage('shua')" data-page-node-id="A483WRoTI6o3OhAkJHwbWG">＋ 刷单报销截图上传</button>
+        <div class="grid" id="gridShua" data-page-node-id="N5DvX1ImFculm05f56rGIV"></div>
+        <div class="ocrbar" id="ocrShua" data-page-node-id="OyqAPzsm5h2XMx1GxjuOfH"></div>
+        <div class="hint" data-page-node-id="b0256AmX0KnzuIBk0V8ZsG">识别未必 100% 准确，请逐行核对修正。截图位上限20张，不能超过。金额请手动填写。</div>
+      </div>
+      <div class="card" data-page-node-id="FlLUEAz67m16jw0AbfetWj">
+        <div class="sec-title" data-page-node-id="34oeGX4OGKoaa69nHvDBkn">刷单金明细</div>
+        <table data-page-node-id="lVLpE4or6NM5srQR9KSapG">
+          <thead data-page-node-id="GgkIcG3OCOmMZ5Y2BcZ96I">
+            <tr data-page-node-id="TA2ZKV38cqgjAiATtZ1liv"><th data-page-node-id="rYu7rFvkcvCScBxc8tME6C">序号</th><th data-page-node-id="yC9qLyuQWEPNnPbPUOYbu1">付款截图<br data-page-node-id="Fi27GxbgYSaufwEGMUES1a">(含金额·时间·数量)</th><th data-page-node-id="629ailzZ3r9aZ4CfrBd9rR">核销码</th><th data-page-node-id="Icr2diQffzAC3uY6J5bmAv">付款金额(¥)</th><th data-page-node-id="nGM7UrTZy4L8c2o3QtKhyQ">报销明细/时间</th><th data-page-node-id="TCnfZevILg6By2VWcJvtJk"></th></tr>
+          </thead>
+          <tbody id="bodyShua" data-page-node-id="YCoJ6VdS0CKLVAggz7yzx3"></tbody>
+        </table>
+        <div style="margin-top:8px;" data-page-node-id="51X6AYZTJuFTMC2PxEaSX9"><button class="btn ghost sm" onclick="addRow('shua')" data-page-node-id="H5W9hFXbG4NiiGpMKKgeUI">＋ 手动加一行</button></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bar" data-page-node-id="9ijhI2TaPB2ILSJijLvxRx">
+    <button class="btn ghost sm" id="btnOpenBrowser" onclick="openInBrowser()" style="display:none;color:#07c160" data-page-node-id="btnOpenBrowser">📲 用浏览器打开</button>
+    <button class="btn ghost sm" onclick="copyTSV()" data-page-node-id="a7mGrz0Fs5mPK5X92vlsns">复制明细</button>
+    <button class="btn ghost sm" onclick="exportXLSX()" data-page-node-id="6Atgrt9fc6TmoO9lZSUKgp">导出Excel</button>
+    <button class="btn ghost sm" onclick="clearAll()" style="color:var(--danger)" data-page-node-id="2izjaAF9mf4O9FuscWv19e">一键清空</button>
+    <span class="dev-sign" data-page-node-id="devsign">Designed &amp; Developed by Ivy Zhao 🌸</span>
+  </div>
+
+  <input type="file" id="fileDaily" accept="image/*" multiple style="display:none" onchange="onFile('daily',this)" data-page-node-id="0aG5gcwRFP7r7mIL4HEv2G" />
+  <input type="file" id="fileShua" accept="image/*" multiple style="display:none" onchange="onFile('shua',this)" data-page-node-id="7IYuOJeEI79lnoJ824Bx1D" />
+  <div class="toast" id="toast" data-page-node-id="HrYcQOkF25by4Gfh9PS4fN"></div>
+  <div class="modal" id="modal" onclick="closeModal()" data-page-node-id="Z40yTWcE450UQWTP6sFINg"><div class="box" onclick="event.stopPropagation()" data-page-node-id="54a1AGFGgC2zNZVsWnDPnn"><div id="modalBody" data-page-node-id="bKT04vi82mq19KiCis30lf"></div><div style="margin-top:12px" data-page-node-id="z0oWg3Ptdlr0EyTH0EYFYl"><button class="btn ghost sm" onclick="closeModal()" data-page-node-id="vdGtuLO8PJWFAD7SkAaka8">关闭</button></div></div></div>
+
+  <!-- 截图放大灯箱 -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()" data-page-node-id="lbRoot">
+    <div class="lbclose" data-page-node-id="lbClose">✕</div>
+    <img id="lbImg" src="" alt="截图" onclick="event.stopPropagation()" data-page-node-id="lbImg" />
+    <div class="lbtip" data-page-node-id="lbTip">点击空白处关闭 · 双指可缩放</div>
+  </div>
+</div>
+
+<script>
+/* ============ 识别/导出组件加载配置 ============
+ * 已本地化（useLocal:true）：Tesseract.js 引擎、wasm、中英文库、ExcelJS 全部打包在 ./assets/ 下，零外部 CDN 依赖。
+ * 部署在腾讯 EdgeOne Pages（微信/浏览器均可直接打开）；带 ?eo_token= 的完整链接是入口，删尾会 401。
+ * 微信内置浏览器会拦截「浏览器下载」，导出 Excel 时自动弹出保存指引弹层（装 WPS 或跳浏览器导出）。
+ */
+/* 关键：Tesseract 的 Worker 内部用 importScripts()，无法解析相对路径（须绝对 URL），
+ * 否则报 "Failed to execute 'importScripts' ... URL './assets/worker.min.js' is invalid"。
+ * 故这里基于当前页面地址算出 assets 的绝对目录再传入。 */
+const ASSETS_BASE = new URL('./assets/', location.href).href;
+const OFFLINE = { useLocal:true, workerPath:ASSETS_BASE+'worker.min.js', corePath:ASSETS_BASE, langPath:ASSETS_BASE };
+const MAX_SHOTS = { daily:20, shua:20 };  // 截图位上限（不能超过）：日常 20 张，刷单 20 张
+function maxShots(mod){ return MAX_SHOTS[mod]||20; }
+const LS_V2 = 'baoxiao_state_v2', LS_V1_D='baoxiao_daily_v1', LS_V1_S='baoxiao_shua_v1';
+
+/* state[mod] = { shots:[{id,img,time,text,badge}], rows:[...] } */
+let state = { daily:{shots:[],rows:[]}, shua:{shots:[],rows:[]} };
+let worker=null, currentTab='daily';
+
+/* ---------- 引擎 ---------- */
+function setEngine(status, ok){
+  $('engineStatus').textContent='识别引擎：'+status;
+  $('engineDot').style.background= ok?'var(--ok)':'var(--warn)';
+}
+async function ensureWorker(){
+  if(worker) return worker;
+  const logger=m=>{ if(m.status==='recognizing text'||m.status==='loading language model'){
+    const p=m.progress?Math.round(m.progress*100)+'%':'';
+    $('ocr'+(currentTab==='daily'?'Daily':'Shua')).textContent='识别中… '+m.status+' '+p; }};
+  const opts = OFFLINE.useLocal ? {workerPath:OFFLINE.workerPath,corePath:OFFLINE.corePath,langPath:OFFLINE.langPath,logger} : {logger};
+  setEngine('加载中（首次需联网）…', false);
+  try{ worker = await Tesseract.createWorker('chi_sim+eng',1,opts);
+    try{ await worker.setParameters({ tessedit_pageseg_mode:'11', preserve_interword_spaces:'1' }); }catch(_){}
+    setEngine('已就绪',true); return worker; }
+  catch(e){ setEngine('引擎加载失败，可手动填写',false); throw e; }
+}
+/* 引擎在 boot() 内按需初始化（组件动态加载完成后才创建） */
+
+/* ---------- 工具 ---------- */
+function $(id){return document.getElementById(id);}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function fmtMoney(n){return (Math.round(n*100)/100).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function openModal(html){$('modalBody').innerHTML=html;$('modal').classList.add('show');}
+function closeModal(){$('modal').classList.remove('show');}
+function isWeChat(){ return /MicroMessenger/i.test(navigator.userAgent||''); }
+/* 微信里导出 Excel 的保存指引：微信拦截浏览器下载，文件可能已存进手机但无 App 打开，或需跳出微信导出 */
+function wxSaveHelp(){
+  openModal(
+    '<b>📱 微信里拿文件的两条路</b>'+
+    '<p style="margin:8px 0 2px">Excel 已经生成。微信会拦浏览器下载，按下面任一条操作即可：</p>'+
+    '<p style="margin:8px 0 2px"><b>办法一（推荐）：装 WPS 直接开</b><br>'+
+    '如果点了导出后弹出「即将离开微信，在浏览器打开」：<b>点确认</b>，文件就会下载到手机。去应用市场装 <b>WPS Office</b>，然后从手机通知栏点开下载完成提示，或在微信聊天列表顶部的「文件」入口 /「文件管理」App 的 Download 目录里找到 <b>报销明细_'+dateStr()+'.xlsx</b>，用 WPS 打开。</p>'+
+    '<p style="margin:8px 0 2px"><b>办法二：跳出微信导出</b><br>'+
+    '点右上角「···」→「在浏览器打开」→ 在打开的浏览器里重新点「导出Excel」，浏览器保存文件不受拦截。</p>'+
+    '<div style="margin-top:10px"><button class="btn sm" onclick="copyTSV()">复制明细文本（无截图）</button> '+
+    '<button class="btn ghost sm" onclick="closeModal()">我知道了</button></div>'+
+    '<p style="font-size:12px;color:#999;margin:8px 0 0">提示：「复制明细文本」只有文字，需要带截图的完整 Excel 请用办法一或二。</p>'
+  );
+}
+/* 剪贴板兼容：clipboard API 不可用时降级 execCommand */
+function copyText(t, ok){
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok).catch(()=>copyFallback(t,ok)); }
+  else copyFallback(t, ok);
+}
+function copyFallback(t, ok){
+  const ta=document.createElement('textarea'); ta.value=t;
+  ta.style.cssText='position:fixed;left:0;top:0;opacity:0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy') ? ok() : toast('复制失败，请长按全选手动复制'); }
+  catch(e){ toast('复制失败，请长按全选手动复制'); }
+  document.body.removeChild(ta);
+}
+
+/* ============ 微信内导出：明细长图（长按即可转发/保存）+ Excel 原文件按钮 ============ */
+let _lastXlsxBlob=null, _lastXlsxName='';
+function loadImgEl(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+function roundRectPath(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawCover(ctx,img,x,y,w,h){ const s=Math.max(w/img.width,h/img.height); const dw=img.width*s, dh=img.height*s; ctx.save(); roundRectPath(ctx,x,y,w,h,10); ctx.clip(); ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh); ctx.restore(); }
+async function makeSheetImage(mod){
+  const st=state[mod];
+  const rows=st.rows||[];
+  const W=750, rowH=170, headH=130, sumH=110;
+  const H=headH+rows.length*rowH+sumH;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  if(!ctx) return null;
+  ctx.fillStyle='#f2f3f7'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold 36px sans-serif';
+  ctx.fillText((mod==='daily'?'报销明细':'刷单金明细')+' · '+dateStr(), 30, 66);
+  ctx.fillStyle='#8a8f99'; ctx.font='22px sans-serif';
+  ctx.fillText('长按图片可「发送给朋友」或「保存图片」', 30, 104);
+  let y=headH, total=0;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    ctx.fillStyle='#fff'; roundRectPath(ctx,20,y+8,W-40,rowH-16,14); ctx.fill();
+    const shot=shotOf(mod,r);
+    let im=null;
+    if(shot&&shot.img) im=await loadImgEl(shot.img);
+    const bx=36, by=y+22, bw=216, bh=rowH-44;
+    if(im){ drawCover(ctx,im,bx,by,bw,bh); }
+    else{ ctx.fillStyle='#eef0f3'; roundRectPath(ctx,bx,by,bw,bh,10); ctx.fill(); ctx.fillStyle='#b0b6bf'; ctx.font='18px sans-serif'; ctx.fillText('无截图', bx+bw/2-28, by+bh/2+6); }
+    const tx=276;
+    const item=String(r.item||r.code||('明细'+(i+1))).slice(0,16);
+    const amt=parseFloat(r.amount);
+    const tm=String(r.time||'');
+    ctx.fillStyle='#2b2f36'; ctx.font='bold 26px sans-serif';
+    ctx.fillText(item, tx, y+54);
+    ctx.fillStyle='#7a7f88'; ctx.font='20px sans-serif';
+    ctx.fillText(tm+(r.note?(' · '+String(r.note).slice(0,10)):''), tx, y+92);
+    if(!isNaN(amt)){ ctx.fillStyle='#e63946'; ctx.font='bold 32px sans-serif'; ctx.fillText('¥'+amt, tx, y+136); total+=amt; }
+    y+=rowH;
+  }
+  ctx.fillStyle='#1a1a2e'; roundRectPath(ctx,20,y+8,W-40,sumH-24,14); ctx.fill();
+  ctx.fillStyle='#555'; ctx.font='24px sans-serif'; ctx.fillText('共 '+rows.length+' 笔', 44, y+sumH/2+2);
+  ctx.fillStyle='#e63946'; ctx.font='bold 40px sans-serif'; ctx.fillText('合计 ¥'+(total?total.toFixed(2):'0'), W-330, y+sumH/2+10);
+  return cv.toDataURL('image/jpeg',0.85);
+}
+async function wxExportPanel(mod, imgCount){
+  let img=null;
+  try{ img=await makeSheetImage(mod); }catch(e){}
+  const imgHtml = img? '<img src="'+img+'" style="max-width:100%;border:1px solid #eee;border-radius:10px;display:block;margin:8px 0">' : '';
+  openModal(
+    '<b>✅ 导出成功（含 '+imgCount+' 张截图）</b>'+
+    '<p style="margin:10px 0 2px;font-size:13px"><b>① 转发给别人：</b><b style="color:#07c160">长按下方图片</b> → 「发送给朋友」或「保存图片」</p>'+
+    imgHtml+
+    '<p style="margin:10px 0 2px;font-size:13px"><b>② 要 Excel 原文件：</b>点下面按钮 → 弹「即将离开微信」时<b>点确认</b> → 文件存进手机 → 装 WPS Office 打开（在 WPS 里也能转发给别人）</p>'+
+    '<div style="margin-top:10px"><button class="btn sm" onclick="downloadXlsxNow()">保存 Excel 到手机</button> '+
+    '<button class="btn ghost sm" onclick="closeModal()">关闭</button></div>'+
+    '<p style="font-size:12px;color:#999;margin:8px 0 0">图片版=快速转发核对用；Excel 版=正式报销存档用（含完整截图）。</p>'
+  );
+}
+function downloadXlsxNow(){
+  if(!_lastXlsxBlob){ toast('请重新点导出'); return; }
+  const url=URL.createObjectURL(_lastXlsxBlob);
+  const a=document.createElement('a'); a.href=url; a.download=_lastXlsxName; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  toast('已开始保存，确认后进手机');
+}
+/* 微信内：一键复制链接，引导用手机浏览器打开（浏览器里导出可保存/可分享，不受微信拦截） */
+function openInBrowser(){
+  copyText(location.href, ()=>toast('链接已复制：打开手机浏览器粘贴进入'));
+}
+
+function pickImage(mod){ $('file'+(mod==='daily'?'Daily':'Shua')).click(); }
+
+/* 识别任务串行排队：一次多张时不并发抢同一个引擎，避免卡死/内存爆 */
+let ocrChain=Promise.resolve();
+function runQueued(fn){ ocrChain=ocrChain.then(fn).catch(()=>{}); return ocrChain; }
+
+async function onFile(mod, input){
+  const files=Array.prototype.slice.call(input.files||[]);
+  input.value='';
+  if(!files.length) return;
+  const st=state[mod], cap=maxShots(mod);
+  let n=0;
+  for(const f of files){
+    if(st.shots.length>=cap){ toast('截图位已达上限（'+cap+'张），不能超过'); break; }
+    let dataUrl;
+    try{ dataUrl=await resizeImage(f,1000); }catch(e){ toast('图片读取失败：'+((f&&f.name)||'')); continue; }
+    const shot={id:uid(), img:dataUrl, time:'', text:'', badge:'排队识别…'};
+    st.shots.push(shot); n++;
+    render(mod); save();
+    runQueued(()=>runOCR(mod, shot, f));
+  }
+  if(n) toast('已添加 '+n+' 张，识别中…（共 '+st.shots.length+'/'+cap+' 张）');
+}
+
+function resizeImage(file,max){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>{const img=new Image();
+      img.onload=()=>{const sc=Math.min(1,max/Math.max(img.width,img.height));
+        const c=document.createElement('canvas'); c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.72));};
+      img.onerror=rej; img.src=e.target.result;};
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+function fileTime(file){ try{const d=new Date(file.lastModified); if(isNaN(d))return'';
+  const p=n=>('0'+n).slice(-2); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}catch(e){return'';} }
+
+/* OCR 专用预处理：灰度 + 对比度拉伸 + 放大到长边约2200（手机截图小字识别更准；仅用于识别，不改显示/保存） */
+const OCR_LONG=2200;
+function prepForOCR(dataUrl){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const base=Math.max(img.width,img.height);
+        const sc=Math.min(3, Math.max(0.5, OCR_LONG/base));   // 小图放大、超大图适度缩小
+        const w=Math.max(1,Math.round(img.width*sc)), h=Math.max(1,Math.round(img.height*sc));
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        const ctx=c.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,0,0,w,h);
+        const d=ctx.getImageData(0,0,w,h), a=d.data;
+        for(let i=0;i<a.length;i+=4) a[i]=a[i+1]=a[i+2]=Math.round(0.299*a[i]+0.587*a[i+1]+0.114*a[i+2]);
+        const hist=new Array(256).fill(0), total=a.length/4;
+        for(let i=0;i<a.length;i+=4) hist[a[i]]++;
+        let lo=0, hi=255, acc=0;
+        for(let v=0;v<256;v++){ acc+=hist[v]; if(acc>total*0.02){ lo=v; break; } }
+        acc=0;
+        for(let v=255;v>=0;v--){ acc+=hist[v]; if(acc>total*0.02){ hi=v; break; } }
+        const rng=Math.max(1,hi-lo);
+        for(let i=0;i<a.length;i+=4){ let v=Math.round((a[i]-lo)*255/rng); a[i]=a[i+1]=a[i+2]=v<0?0:v>255?255:v; }
+        ctx.putImageData(d,0,0);
+        res(c.toDataURL('image/png'));
+      }catch(e){ res(dataUrl); }
+    };
+    img.onerror=()=>res(dataUrl);
+    img.src=dataUrl;
+  });
+}
+function readAsDataURL(file){ return new Promise((res,rej)=>{ try{
+  const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsDataURL(file);
+}catch(e){ rej(e); } }); }
+
+/* ---------- OCR ---------- */
+async function runOCR(mod, shot, file){
+  let text='';
+  try{ const w=await ensureWorker();
+    /* 识别用「原图」：压缩版只用于显示/导出；原图清晰度更高，小字识别率明显更好 */
+    let src=shot.img;
+    try{
+      const full = file ? await readAsDataURL(file) : shot.img;
+      src=await prepForOCR(full);
+    }catch(_){}
+    const {data}=await w.recognize(src); text=data.text||''; }
+  catch(e){ console.error('OCR 失败:',e); setBadge(mod,shot.id,'⚠识别失败'); toast('识别失败：'+(e&&e.message?e.message.slice(0,80):e)); return; }
+  shot.text=text;
+  const ft=fileTime(file);
+
+  if(mod==='daily'){
+    shot.time = parseTime(text) || ft || '';
+    const row={ id:uid(), shotId:shot.id, amount:parseAmount(text), item:parseItem(text), invoice:'是', note:'' };
+    state.daily.rows.push(row);
+    setBadge(mod,shot.id, (row.amount!=null?'¥'+fmtMoney(row.amount):'¥?')+(row.item?' · '+row.item.slice(0,8):''));
+  }else{
+    const codes=parseCodes(text);
+    const times=parseTimes(text);
+    shot.time = times[0] || ft || '';
+    if(codes.length===0){
+      state.shua.rows.push({ id:uid(), shotId:shot.id, code:'', amount:'', time:shot.time });
+      setBadge(mod,shot.id,'未识别到券码·手动填');
+    }else{
+      codes.forEach((code,i)=>{ state.shua.rows.push({ id:uid(), shotId:shot.id, code, amount:'', time: times[i]||shot.time||'' }); });
+      shot.time = times[0]||shot.time||'';
+      setBadge(mod,shot.id, codes.length+' 个券码');
+      if(codes.length>1) toast('识别到 '+codes.length+' 个券码，已生成 '+codes.length+' 行');
+    }
+  }
+  render(mod); save();
+}
+function setBadge(mod,id,txt){ const s=state[mod].shots.find(x=>x.id===id); if(s) s.badge=txt;
+  const el=$('badge-'+mod+'-'+id); if(el) el.textContent=txt; }
+
+/* ---------- 解析规则 ---------- */
+/* 全角数字/符号归一（OCR 常把 15 读成全角１５） */
+function normDigits(s){
+  if(!s) return '';
+  return String(s)
+    .replace(/[\uFF10-\uFF19]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/\uFF0E/g,'.').replace(/\uFF0C/g,',').replace(/\uFF1A/g,':')
+    .replace(/[\uFFE5\uFF04]/g,'\u00A5').replace(/[\t\u00A0\u3000]/g,' ');
+}
+/* 去掉与金额无关的数字：日期时间 / 订单号 / 券码 / 电话 / 长数字串 */
+function stripNumNoise(t){
+  return normDigits(t)
+    .replace(/\d{4}[-\/年.]\d{1,2}[-\/月.]\d{1,2}(?:[ T]\d{1,2}[:：]\d{2}(?::\d{2})?)?/g,' ')
+    .replace(/\d{1,2}[:：]\d{2}(?::\d{2})?/g,' ')
+    .replace(/(?:订单号|单号|券\s*码|核销码|券号|编号|手机号|电话|账号)[：: ]*[\d\s\-]{5,}/g,' ')
+    .replace(/(?<!\d)\d{7,}(?!\d)/g,' ');
+}
+/* 金额：优先「实付价/实付款/实付金额/合计/总计…」等关键词，其次 ¥ 金额兜底；0 元不作首选 */
+const AMT_KW=['实付款金额','实付金额','实付款','实际付款','实际支付','实付价','实付','实收金额','实收',
+              '支付金额','付款金额','付款总额','订单金额','应付金额','应收金额','消费金额','消费总额','收款金额',
+              '合计金额','合计','总计','总价','金额'];
+function parseAmount(text){
+  const t=stripNumNoise(text);
+  const pickAll=(re)=>{ const out=[]; let m; while((m=re.exec(t))){ const v=parseFloat(m[1].replace(/,/g,'')); if(isFinite(v)) out.push(v); } return out; };
+  const best=a=>{ if(!a.length) return null; const pos=a.filter(v=>v>0); return pos.length? Math.max.apply(null,pos) : Math.max.apply(null,a); };
+  /* 1) 关键词优先（关键词与数字之间允许 ¥/空格/少量杂字符，OCR 容错） */
+  const reK=new RegExp('(?:'+AMT_KW.join('|')+')[^0-9\\n]{0,4}([0-9][0-9,]*(?:\\.[0-9]{1,2})?)','g');
+  let r=best(pickAll(reK)); if(r!=null && r>0) return r;
+  /* 2) ¥/￥ 后的数字 */
+  r=best(pickAll(/\u00A5[ ]*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/g)); if(r!=null && r>0) return r;
+  /* 3) 兜底：带两位小数的金额 */
+  r=best(pickAll(/(?<![\d.])([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})(?![\d])/g)); if(r!=null) return r;
+  return null;
+}
+/* ---------- 明细（物品）识别 ----------
+ * 三层策略：
+ *  ① 标签行（商户名称/商品名称/商户全称…）→ 直接取值，但「商品快照」这类假标签必须排除
+ *  ② 商品标题行打分（含商品词尾字/【】/长度适中加分；店铺名、带字母、超长减分）→ 选中后可与下一行拼成完整标题
+ *  ③ 逐行抽商品词（插线板 / 红枣山药八珍糕）→ 店铺名兜底
+ */
+const ITEM_UNIT=/\d+\s*(?:位|孔|米|cm|CM|mm|ml|ML|L|g|G|kg|KG|个|只|支|片|包|袋|盒|瓶|张|双|件|套|台|条|卷|抽|层|人|份|罐|提|把|克)/g;
+const ITEM_WORDS=['官方旗舰','旗舰店','官方','正品','包邮','优选','同款','新款','爆款','热卖','限时','秒杀','精选','特价','超值','必备',
+  '加厚','加长','大号','小号','加装','升级','新款','家用','多功能','通用','专用','适用',
+  '无蔗糖','蔗糖','代餐','早餐','营养','网红','解馋','零食','小食','小吃','好吃','速食','即食',
+  '整箱','量贩','大份量','组合装','家庭装','超值装','独立包装','买一送一','第二件','款'];
+const ITEM_SUFFIX='板座器机纸巾液膏袋瓶盆盒垫套架灯线表刷布笔桶锅碗刀剪钳锤胶带帽袜鞋椅桌床箱包伞杯壶罐车牌镜贴膜芯环管珠链扣钩夹叉勺筷枕被毯帘糕饼糖茶米面粉油醋酱霜露乳皂药丸果蔬肉蛋奶酒';
+/* 明细里绝不能出现的词（说明文字/价格/状态/按钮/地址…） */
+const ITEM_JUNK=/交易成功|交易关闭|交易失败|支付成功|付款成功|已签收|待签收|待收货|待发货|已发货|已送达|待付款|待评价|已评价|退款|退货|售后|客服|评价|联系商家|联系卖家|分享商品|申请退款|申请售后|加入购物车|立即购买|立即支付|再次购买|查看物流|商品快照|可作为判断依据|交易争议|展开|收起|复制|订单号|订单编号|交易单号|支付方式|付款方式|共优惠|优惠|实付|应付|合计|总计|小计|运费|配送费|打包费|免运费|包运费|保障|承诺|旗舰店|专营店|专卖店|企业店|官方店|店铺|月销|销量|库存|规格|数量|克数|袋数|重量|净含量|送达|送至|收货|地址|电话|手机|号码|准时达|匿名|隐私|发票|备注|说明|结算|提交订单|申请开票|价格明细|商品总额|订单金额|共\d+件/;
+/* 抽出来的词若是这些，判为不合格 */
+const ITEM_BAD=/店|热线|客服|电话|支付|收款|账号|余额|优惠|金额|价格|总计|合计|订单|快照|争议|展开|首页|首页|更多|详情/;
+function cleanItem(s){
+  return String(s||'').replace(/^[的了和与及把被为就还也很款]+/,'').replace(/[的了和与及把被为就还也很款>》\s]+$/,'').trim();
+}
+function extractGoods(line){
+  let s=normDigits(line)
+    .replace(/【[^】]{0,30}】/g,' ').replace(/\([^)]{0,30}\)|（[^）]{0,30}）/g,' ')
+    .replace(ITEM_UNIT,' ')
+    .replace(/[A-Za-z]{1,}[0-9]*/g,' ')
+    .replace(/[·|丨\/\\+\-—_~、,，。;；:：!！?？"“”'']+/g,' ');
+  ITEM_WORDS.forEach(w=>{ s=s.split(w).join(' '); });
+  const segs=s.split(/\s+/).map(x=>x.trim()).filter(x=>x.length>=2 && /^[\u4e00-\u9fa5]+$/.test(x));
+  const cands=[];
+  for(const seg of segs){
+    const arr=[...seg];
+    let best='';
+    for(let k=1;k<arr.length;k++){                       // 取「以商品词尾字结尾」的最长片段（≤8字）
+      if(ITEM_SUFFIX.indexOf(arr[k])<0) continue;
+      const w=arr.slice(0,k+1).join('');
+      if(w.length>=2 && w.length<=8 && w.length>best.length) best=w;
+    }
+    if(!best){                                            // 兜底：词尾字倒着找，取最近 2~3 字
+      for(let k=arr.length-1;k>=1;k--){
+        if(ITEM_SUFFIX.indexOf(arr[k])>=0){ best=arr.slice(Math.max(0,k-1),k+1).join(''); break; }
+      }
+    }
+    best=cleanItem(best);
+    if(best.length>=2 && !ITEM_BAD.test(best)) cands.push(best);
+  }
+  if(!cands.length) return '';
+  cands.sort((a,b)=>b.length-a.length);                   // 取最长的那个，避免「小米」抢掉「插线板」
+  return cands[0];
+}
+function parseItem(t){
+  const raw=normDigits(t);
+  const lines=raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  /* ① 名称类标签行（标签须短，且不含 快照/数量/总额/编号 等 → 排掉「商品快照：发生交易争议时…」） */
+  const LB=/^(商户名称|商户全称|商户简称|店铺名称|商家名称|门店名称|收款方名称|收款方全称|收款方|商品名称|产品名称|项目名称|名称|商户|商家|门店|店铺|商品|项目|收款)[：:]\s*(.+)$/;
+  for(const l of lines){
+    const m=LB.exec(l); if(!m) continue;
+    if(/快照|数量|总额|编号|号码|时间|状态|详情|方式/.test(m[1])) continue;
+    const val=cleanItem(m[2]);
+    if(val.length<2 || val.length>40) continue;
+    if(ITEM_JUNK.test(val)) continue;
+    if(/^[\d.,\u00A5%\-+\s]+$/.test(val)) continue;
+    return val;
+  }
+  /* ② 商品标题行打分 */
+  const idx=[], score=new Map();
+  lines.forEach((l,i)=>{
+    const bad = l.length<2 || l.length>60
+      || /^[\d.,\u00A5%\s:：\-+]+$/.test(l)
+      || /\d{4}[-/年.]\d{1,2}[-/月.]\d{1,2}/.test(l)
+      || /(?<!\d)\d{6,}(?!\d)/.test(l)
+      || /^[<>|「」\[\]()（）【】]/.test(l)
+      || ITEM_JUNK.test(l);
+    if(bad) return;
+    let sc=0;
+    const cjk=(l.match(/[\u4e00-\u9fa5]/g)||[]).length;
+    if([...l].some(ch=>ITEM_SUFFIX.indexOf(ch)>=0)) sc+=4;   // 含商品词尾字（板/糕/纸…）
+    if(/【[^】]{2,}】/.test(l)) sc+=2;
+    if(cjk>=3 && cjk<=24) sc+=3; else if(cjk<3) sc-=2;
+    if(l.length>30) sc-=3;
+    if(/旗舰|专营|专卖|超市|商场|中心|市场|店铺|店/.test(l)) sc-=2;
+    if(/[A-Za-z]{3,}/.test(l)) sc-=1;
+    idx.push(i); score.set(i,sc);
+  });
+  const isStoreLine=l=>/旗舰|专营|专卖|超市|商场|中心|市场|店/.test(l);
+  idx.sort((a,b)=>score.get(b)-score.get(a));
+  /* ② 商品标题行（店铺行不抽词，留给 ④ 整行兜底）：标题常被 OCR 断成 1~3 行 → 拼起来再抽 */
+  for(const i of idx){
+    if(isStoreLine(lines[i])) continue;
+    let block=lines[i], j=i+1;
+    while(j<lines.length && score.has(j) && score.get(j)>=score.get(i)-4
+      && !isStoreLine(lines[j]) && (block.length+lines[j].length)<=44){ block+=lines[j]; j++; }
+    const g=extractGoods(block); if(g) return g;
+  }
+  /* ③ 店铺/商户行兜底（整行原样用） */
+  for(const i of idx){ if(isStoreLine(lines[i]) && lines[i].length<=30) return lines[i]; }
+  for(const i of idx){ if(lines[i].length<=24) return lines[i]; }
+  const fb=lines.find(l=>!/^[\d.,\u00A5%\s:：\-+]+$/.test(l));
+  return fb||lines[0]||'';
+}
+function parseTime(t){ const a=parseTimes(t); return a.length?a[0]:''; }
+
+/* 券码：优先「券码:/核销码:/券号:」前缀 → 兜底 4-4-4-1 分组 → 兜底 12~16 位连续数字 */
+function parseCodes(text){
+  const out=[]; let m;
+  const push=d=>{ d=String(d).replace(/\D/g,''); if(d.length>=10&&d.length<=20) out.push(fmtCode(d)); };
+  const reA=/(?:券\s*码|核销码|验\s*券\s*码|券\s*号)[：:\s]*((?:\d[\s\-]?){10,20})/g;
+  while((m=reA.exec(text))) push(m[1]);
+  if(out.length) return uniq(out);
+  const reB=/(?<!\d)(\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-]\d)(?!\d)/g;
+  while((m=reB.exec(text))) push(m[1]);
+  if(out.length) return uniq(out);
+  const reC=/(?<!\d)(\d{12,16})(?!\d)/g;
+  while((m=reC.exec(text))) push(m[1]);
+  return uniq(out);
+}
+function fmtCode(d){ return d.replace(/(\d{4})(?=\d)/g,'$1 ').trim(); }
+function uniq(a){ return [...new Set(a)]; }
+
+/* 时间：只保留日期 YYYY-MM-DD（不要具体几点） */
+function parseTimes(text){
+  const out=[]; let m;
+  const reA=/(?:验证时间|核销时间|消费时间|验券时间|下单时间|支付时间|付款时间|时间)[：:\s]*(\d{4}[-.\/年]\d{1,2}[-.\/月]\d{1,2}(?:[ T]\d{1,2}[:：]\d{2}(?::\d{2})?)?)/g;
+  while((m=reA.exec(text))) out.push(normDate(m[1]));
+  if(out.length) return out.filter(Boolean);
+  const reB=/(\d{4}[-.\/年]\d{1,2}[-.\/月]\d{1,2})/g;
+  while((m=reB.exec(text))) out.push(normDate(m[1]));
+  return out.filter(Boolean);
+}
+function normDate(s){
+  if(!s) return '';
+  s=s.replace(/[.\/年月]/g,'-').replace(/日/g,'').replace(/：/g,':').replace(/\s+/g,' ');
+  const m=/(\d{4}-\d{1,2}-\d{1,2})/.exec(s);
+  return m? m[1] : '';
+}
+
+/* ---------- 渲染 ---------- */
+function switchTab(mod){
+  currentTab=mod;
+  $('tabDaily').classList.toggle('active',mod==='daily');
+  $('tabShua').classList.toggle('active',mod==='shua');
+  $('secDaily').style.display= mod==='daily'?'block':'none';
+  $('secShua').style.display = mod==='shua'?'block':'none';
+}
+function render(mod){
+  if(mod==='daily') renderDaily(); else renderShua();
+  renderGrid(mod);
+  const capD=maxShots('daily'), capS=maxShots('shua');
+  $('dailyCount').textContent=state.daily.shots.length+'/'+capD;
+  $('shuaCount').textContent=state.shua.shots.length+'/'+capS;
+  const fullD=state.daily.shots.length>=capD, fullS=state.shua.shots.length>=capS;
+  $('btnDaily').disabled=fullD; $('btnDaily').style.opacity=fullD?0.5:1;
+  $('btnShua').disabled=fullS;  $('btnShua').style.opacity=fullS?0.5:1;
+}
+function shotCell(mod,row){
+  const st=state[mod];
+  if(!row.shotId) return '<span class="tline">手动录入</span>';
+  const shot=st.shots.find(s=>s.id===row.shotId);
+  if(!shot) return '<span class="tline">—</span>';
+  const first=st.rows.find(r=>r.shotId===row.shotId);
+  if(first && first.id!==row.id) return '<span class="tline">↳ 同上截图</span>';
+  // 刷单「付款截图」列：纯截图占满单元格，不堆多余内容（时间已在「报销明细/时间」列）
+  if(mod==='shua') return '<img class="shotimg" src="'+shot.img+'" onclick="zoom(\''+shot.id+'\',\''+mod+'\')">';
+  // 日常「截图合规校验」列无独立时间列，截图下方保留日期
+  return '<img class="shotimg" src="'+shot.img+'" onclick="zoom(\''+shot.id+'\',\''+mod+'\')"><div class="tline">'+esc(shot.time||'—')+'</div>';
+}
+function renderDaily(){
+  const b=$('bodyDaily'); b.innerHTML='';
+  state.daily.rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td>'+(i+1)+'</td>'+
+      '<td>'+shotCell('daily',r)+'</td>'+
+      '<td><input class="amt" inputmode="decimal" value="'+(r.amount!=null?r.amount:'')+'" oninput="upd(\'daily\',\''+r.id+'\',\'amount\',this.value)"></td>'+
+      '<td><input value="'+esc(r.item)+'" oninput="upd(\'daily\',\''+r.id+'\',\'item\',this.value)"></td>'+
+      '<td><select onchange="upd(\'daily\',\''+r.id+'\',\'invoice\',this.value)"><option '+(r.invoice==='是'?'selected':'')+'>是</option><option '+(r.invoice==='否'?'selected':'')+'>否</option></select></td>'+
+      '<td><input value="'+esc(r.note)+'" oninput="upd(\'daily\',\''+r.id+'\',\'note\',this.value)"></td>'+
+      '<td class="del" onclick="del(\'daily\',\''+r.id+'\')">✕</td>';
+    b.appendChild(tr);
+  });
+}
+function renderShua(){
+  const b=$('bodyShua'); b.innerHTML='';
+  state.shua.rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td>'+(i+1)+'</td>'+
+      '<td>'+shotCell('shua',r)+'</td>'+
+      '<td><input value="'+esc(r.code)+'" oninput="upd(\'shua\',\''+r.id+'\',\'code\',this.value)"></td>'+
+      '<td><input class="amt" inputmode="decimal" value="'+(r.amount||'')+'" placeholder="手动填" oninput="upd(\'shua\',\''+r.id+'\',\'amount\',this.value)"></td>'+
+      '<td><input value="'+esc(r.time)+'" oninput="upd(\'shua\',\''+r.id+'\',\'time\',this.value)"></td>'+
+      '<td class="del" onclick="del(\'shua\',\''+r.id+'\')">✕</td>';
+    b.appendChild(tr);
+  });
+}
+function renderGrid(mod){
+  const g=$(mod==='daily'?'gridDaily':'gridShua'); g.innerHTML='';
+  state[mod].shots.forEach(s=>{
+    const d=document.createElement('div'); d.className='slot';
+    d.innerHTML='<img src="'+s.img+'" onclick="zoom(\''+s.id+'\',\''+mod+'\')"><span class="x" onclick="delShot(\''+mod+'\',\''+s.id+'\')">✕</span>'+
+      '<span class="badge" id="badge-'+mod+'-'+s.id+'" onclick="showText(\''+mod+'\',\''+s.id+'\')">'+esc(s.badge||'')+'</span>';
+    g.appendChild(d);
+  });
+}
+function showText(mod,id){ const s=state[mod].shots.find(x=>x.id===id); if(!s) return;
+  openModal('<div class="sec-title">识别原文（用于核对/纠错）</div><pre>'+esc(s.text||'（暂无）')+'</pre>'); }
+function zoom(id,mod){
+  const s = state[mod] && state[mod].shots.find(x=>x.id===id);
+  if(!s || !s.img) return;
+  $('lbImg').src = s.img;
+  $('lightbox').classList.add('show');
+}
+function closeLightbox(){ $('lightbox').classList.remove('show'); $('lbImg').src=''; }
+
+/* ---------- 增删改 ---------- */
+function addRow(mod){
+  state[mod].rows.push( mod==='daily'
+    ? {id:uid(), shotId:null, amount:null, item:'', invoice:'是', note:''}
+    : {id:uid(), shotId:null, code:'', amount:'', time:''} );
+  render(mod); save();
+}
+function upd(mod,id,key,val){ const r=state[mod].rows.find(x=>x.id===id); if(!r) return; r[key]=val; save(); }
+function del(mod,id){ const a=state[mod].rows; const i=a.findIndex(x=>x.id===id); if(i>=0) a.splice(i,1); render(mod); save(); }
+function delShot(mod,id){
+  const st=state[mod];
+  st.shots=st.shots.filter(s=>s.id!==id);
+  st.rows=st.rows.filter(r=>r.shotId!==id);   // 连同该截图生成的行一起删
+  render(mod); save();
+}
+
+/* ---------- 持久化 ---------- */
+let stmr;
+function save(){ clearTimeout(stmr); stmr=setTimeout(()=>{
+  try{ localStorage.setItem(LS_V2, JSON.stringify(state)); }
+  catch(e){
+    toast('本地存储已满：请先「导出Excel」备份，再删掉部分截图（图越少越省空间）');
+  }
+},300); }
+function load(){
+  try{
+    const v2=localStorage.getItem(LS_V2);
+    if(v2){ state=JSON.parse(v2); }
+    else{ // 兼容 v1 旧数据
+      const d1=JSON.parse(localStorage.getItem(LS_V1_D)||'[]');
+      const s1=JSON.parse(localStorage.getItem(LS_V1_S)||'[]');
+      d1.forEach(r=>{ if(r.img) state.daily.shots.push({id:r.id,img:r.img,time:r.time||'',text:'',badge:''});
+        state.daily.rows.push({id:uid(),shotId:r.img?r.id:null,amount:r.amount==null?null:r.amount,item:r.item||'',invoice:r.invoice||'是',note:r.note||''}); });
+      s1.forEach(r=>{ if(r.img) state.shua.shots.push({id:r.id,img:r.img,time:r.time||'',text:'',badge:''});
+        state.shua.rows.push({id:uid(),shotId:r.img?r.id:null,code:r.code||'',amount:r.amount||'',time:r.time||''}); });
+    }
+  }catch(e){ state={daily:{shots:[],rows:[]},shua:{shots:[],rows:[]}}; }
+  ['daily','shua'].forEach(m=>{ state[m]=state[m]||{shots:[],rows:[]}; state[m].shots=state[m].shots||[]; state[m].rows=state[m].rows||[]; });
+}
+
+/* ---------- 导出：单个 Excel、两个分表、严格复刻原表格式 ---------- */
+const DAILY_HEAD=['序号','截图合规校验(金额/时间/数量)','付款金额(¥)','报销明细','是否开票','备注'];
+const SHUA_HEAD =['序号','付款截图(含金额·时间·数量)','核销码','付款金额(¥)','报销明细/时间'];
+const DAILY_COLS=[6,33.64,12,37.36,10,22];   // 原表「报销明细」列宽
+const SHUA_COLS =[6,33.55,16,12,30];          // 原表「刷单金明细」列宽
+function dailyRow(r,i){ const s=state.daily.shots.find(x=>x.id===r.shotId); return [i+1, s?s.time:'', r.amount!=null?r.amount:'', r.item, r.invoice, r.note]; }
+function shuaRow(r,i){ return [i+1, r.time, r.code, r.amount||'', r.time]; }
+const _bd={style:'thin', color:{argb:'FFBFBFBF'}};   // 原表细灰边框
+function thinBorder(){ return {top:_bd,left:_bd,bottom:_bd,right:_bd}; }
+function dateStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---- 截图贴进 Excel ---- */
+function imgSize(src){ return new Promise(res=>{ try{ const i=new Image();
+  i.onload=()=>res({w:i.naturalWidth||i.width||1, h:i.naturalHeight||i.height||1});
+  i.onerror=()=>res({w:1,h:1}); i.src=src; }catch(e){ res({w:1,h:1}); } }); }
+function regImage(wb,shot){
+  if(!shot||!shot.img) return null;
+  const m=/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/.exec(shot.img);
+  const b64=m? m[2] : null;
+  if(!b64) return null;
+  let ext=(m[1]||'jpeg').toLowerCase(); ext=(ext==='jpg')?'jpeg':ext;
+  if(ext!=='png'&&ext!=='gif'&&ext!=='bmp') ext='jpeg';
+  try{ return wb.addImage({base64:b64, extension:ext}); }catch(e){ return null; }
+}
+/* 单元格内可用像素：列宽 33.6 字符≈240px；截图按列宽撑满，行高不够就自动加高（上限 320pt） */
+const IMG_BOX_W=214, IMG_MIN_PT=160, IMG_MAX_PT=320;
+async function putShot(wb,ws,shot,row0,col0,setH){
+  const id=regImage(wb,shot); if(id==null) return false;
+  const d=await imgSize(shot.img);
+  let w=IMG_BOX_W, h=Math.round(d.h*(IMG_BOX_W/d.w));   // 先按列宽撑满
+  let pt=Math.round(h*0.75)+8;                          // 行高 = 图高(pt) + 余量
+  if(pt>IMG_MAX_PT){ const sc=((IMG_MAX_PT-8)/0.75)/h; h=Math.round(h*sc); w=Math.round(w*sc); pt=IMG_MAX_PT; }
+  if(pt<IMG_MIN_PT) pt=IMG_MIN_PT;                      // 不低于原表行高
+  if(typeof setH==='function') setH(pt);
+  try{ ws.addImage(id,{ tl:{col:col0+0.05, row:row0+0.04}, ext:{width:w, height:h} }); }catch(e){ return false; }
+  return true;
+}
+/* 同一张截图生成多行时，只在第一行贴图 */
+function shotOf(mod,row){
+  const st=state[mod];
+  if(!row.shotId) return null;
+  const first=st.rows.find(x=>x.shotId===row.shotId);
+  if(first && first.id!==row.id) return null;
+  return st.shots.find(s=>s.id===row.shotId)||null;
+}
+
+async function exportXLSX(){
+  if(typeof ExcelJS==='undefined'){ toast('导出组件未加载（首次需联网），请稍后重试'); return; }
+  const wb=new ExcelJS.Workbook();
+  wb.creator='报销'; wb.created=new Date();
+  let imgCount=0;
+
+  /* ===== 分表1：报销明细（日常报销）===== */
+  const s1=wb.addWorksheet('报销明细');
+  s1.columns=DAILY_COLS.map(w=>({width:w}));
+  s1.mergeCells('A1:F1');
+  const t1=s1.getCell('A1'); t1.value='XXX报销登记表';
+  t1.font={name:'宋体',size:14,bold:true};
+  t1.alignment={horizontal:'center',vertical:'middle'};
+  s1.getRow(1).height=26;
+  const h1=s1.getRow(2);
+  DAILY_HEAD.forEach((h,i)=>{ const c=h1.getCell(i+1); c.value=h;
+    c.font={name:'宋体',size:11,bold:true};
+    c.alignment={horizontal:'center',vertical:'middle',wrapText:true}; c.border=thinBorder(); });
+  for(let i=0;i<state.daily.rows.length;i++){
+    const r=state.daily.rows[i];
+    const row=s1.getRow(3+i); row.height=160;   // 原表数据行高 160（便于贴截图）
+    dailyRow(r,i).forEach((v,j)=>{ const c=row.getCell(j+1); c.value=v;
+      c.font={name:'宋体',size:11};
+      c.alignment={horizontal:(j===0||j===2)?'center':'left', vertical:'middle', wrapText:true};
+      c.border=thinBorder(); });
+    const shot=shotOf('daily',r);                     // 截图贴进 B 列「截图合规校验」
+    if(shot && await putShot(wb,s1,shot,2+i,1,pt=>{ row.height=pt; })) imgCount++;
+  }
+
+  /* ===== 分表2：刷单金明细（刷单报销）===== */
+  const s2=wb.addWorksheet('刷单金明细');
+  s2.columns=SHUA_COLS.map(w=>({width:w}));
+  s2.mergeCells('A1:E1');
+  const t2=s2.getCell('A1'); t2.value='刷单金提报模板';
+  t2.font={name:'宋体',size:14,bold:true};
+  t2.alignment={horizontal:'center',vertical:'middle'};
+  s2.getRow(1).height=17.5;
+  const h2=s2.getRow(2);
+  SHUA_HEAD.forEach((h,i)=>{ const c=h2.getCell(i+1); c.value=h;
+    c.font={name:'宋体',size:11,bold:true};
+    c.alignment={horizontal:'center',vertical:'middle',wrapText:true}; c.border=thinBorder(); });
+  for(let i=0;i<state.shua.rows.length;i++){
+    const r=state.shua.rows[i];
+    const row=s2.getRow(3+i); row.height=160;   // 行高足够高，截图才能完整放进去
+    shuaRow(r,i).forEach((v,j)=>{ const c=row.getCell(j+1);
+      c.value=(j===1?'':v);   // 第2列「付款截图」只放图，文字留空
+      c.font={name:'宋体',size:11};
+      c.alignment={horizontal:(j===0||j===2||j===3)?'center':'left', vertical:'middle', wrapText:true};
+      c.border=thinBorder(); });
+    const shot=shotOf('shua',r);                      // 截图贴进 B 列「付款截图」
+    if(shot && await putShot(wb,s2,shot,2+i,1,pt=>{ row.height=pt; })) imgCount++;
+  }
+
+  const buf=await wb.xlsx.writeBuffer();
+  _lastXlsxBlob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  _lastXlsxName='报销明细_'+dateStr()+'.xlsx';
+  if(isWeChat()){ downloadXlsxNow(); return; }   // 微信：不弹任何指引，直接触发下载
+  await deliverXlsx(_lastXlsxBlob, _lastXlsxName, imgCount);
+}
+/* 交付 Excel：优先系统分享面板（可直接「发给微信好友/文件传输助手」或「保存到手机」），不支持才落回下载+指引 */
+async function deliverXlsx(blob, name, imgCount){
+  try{
+    const f=new File([blob], name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    if(navigator.canShare && navigator.canShare({files:[f]})){
+      await navigator.share({files:[f], title:name});
+      toast('文件已交给系统：可保存到手机，或发给微信好友');   // 浏览器分享面板：保存/转发一步到位
+      return;
+    }
+  }catch(e){ if(e && e.name==='AbortError'){ return; } }   // 用户在分享面板点了取消，静默
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url;
+  a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  if(isWeChat()){ wxSaveHelp(); }
+  else toast('已导出 Excel：2 个分表，含 '+imgCount+' 张截图');
+}
+/* 复制当前激活模块对应的表，可直接粘贴到 Excel 模板对应 sheet */
+function copyTSV(){
+  const mod=currentTab;
+  const head = mod==='daily'?DAILY_HEAD:SHUA_HEAD;
+  const rows = mod==='daily'? state.daily.rows.map(dailyRow) : state.shua.rows.map(shuaRow);
+  const o=[head.join('\t')].concat(rows.map(r=>r.join('\t'))).join('\n');
+  copyText(o, ()=>{
+    if($('modal').classList.contains('show')) closeModal();
+    toast('已复制「'+(mod==='daily'?'报销明细':'刷单金明细')+'」全部明细，去微信/WPS里长按粘贴即可');
+  });
+}
+function clearAll(){
+  if(!confirm('确定清空日常与刷单全部数据？')) return;
+  state={daily:{shots:[],rows:[]},shua:{shots:[],rows:[]}};
+  render('daily'); render('shua');
+  localStorage.removeItem(LS_V2); toast('已清空');
+}
+
+/* ---------- 启动：识别/导出组件已本地化（assets/），不依赖任何外部 CDN ---------- */
+function startApp(){ if(isWeChat()){ const b=$('btnOpenBrowser'); if(b) b.style.display=''; } ensureWorker().catch(()=>{}); load(); render('daily'); render('shua'); }
+function boot(){
+  if(location.protocol==='file:'){ setTimeout(()=>alert('⚠️ 你是用「双击文件」方式打开的（file://）。浏览器出于安全会禁止加载识别引擎，识别功能因此用不了。解决办法：用手机或电脑浏览器访问在线链接，或把整个文件夹放到任意 http 服务器再打开。'),300); }
+  if(typeof Tesseract==='undefined' || typeof ExcelJS==='undefined'){
+    setEngine('组件未加载：请把 assets/ 目录与 index.html 放在一起', false);
+    return;
+  }
+  startApp();
+}
+boot();
+</script>
+</body>
+</html>
