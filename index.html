@@ -175,8 +175,20 @@
 /* 关键：Tesseract 的 Worker 内部用 importScripts()，无法解析相对路径（须绝对 URL），
  * 否则报 "Failed to execute 'importScripts' ... URL './assets/worker.min.js' is invalid"。
  * 故这里基于当前页面地址算出 assets 的绝对目录再传入。 */
-const ASSETS_BASE = new URL('./assets/', location.href).href;
+let ASSETS_BASE = new URL('./assets/', location.href).href;   // 本站兜底线路
+const ASSETS_CDN = 'https://cdn.jsdelivr.net/gh/zllan123/baoxiao@main/assets/';  // 国内加速线路（jsDelivr 加速 GitHub 仓库）
 const OFFLINE = { useLocal:true, workerPath:ASSETS_BASE+'worker.min.js', corePath:ASSETS_BASE, langPath:ASSETS_BASE };
+/* 引擎线路自动选择：jsDelivr 4秒内探测通过就用国内加速，否则落回本站，保证「一直加载中」不再出现 */
+async function pickAssetsBase(){
+  const cands=[[ASSETS_CDN,'国内加速线路'],[ASSETS_BASE,'本站线路']];
+  for(const [base,label] of cands){
+    try{
+      const r=await fetch(base+'tesseract.min.js',{method:'HEAD',signal:AbortSignal.timeout(4000)});
+      if(r.ok) return {base,label};
+    }catch(e){}
+  }
+  return {base:ASSETS_BASE,label:'本站线路'};
+}
 const MAX_SHOTS = { daily:20, shua:20 };  // 截图位上限（不能超过）：日常 20 张，刷单 20 张
 function maxShots(mod){ return MAX_SHOTS[mod]||20; }
 const LS_V2 = 'baoxiao_state_v2', LS_V1_D='baoxiao_daily_v1', LS_V1_S='baoxiao_shua_v1';
@@ -195,9 +207,15 @@ async function ensureWorker(){
   const logger=m=>{ if(m.status==='recognizing text'||m.status==='loading language model'){
     const p=m.progress?Math.round(m.progress*100)+'%':'';
     $('ocr'+(currentTab==='daily'?'Daily':'Shua')).textContent='识别中… '+m.status+' '+p; }};
-  const opts = OFFLINE.useLocal ? {workerPath:OFFLINE.workerPath,corePath:OFFLINE.corePath,langPath:OFFLINE.langPath,logger} : {logger};
-  setEngine('加载中（首次需联网）…', false);
-  try{ worker = await Tesseract.createWorker('chi_sim+eng',1,opts);
+  setEngine('选择最快线路…', false);
+  const picked = await pickAssetsBase();
+  ASSETS_BASE = picked.base;
+  OFFLINE.workerPath = ASSETS_BASE+'worker.min.js';
+  OFFLINE.corePath = ASSETS_BASE;
+  OFFLINE.langPath = ASSETS_BASE;
+  const opts2 = OFFLINE.useLocal ? {workerPath:OFFLINE.workerPath,corePath:OFFLINE.corePath,langPath:OFFLINE.langPath,logger} : {logger};
+  setEngine('加载中·'+picked.label+'（首次约10~30秒）…', false);
+  try{ worker = await Tesseract.createWorker('chi_sim+eng',1,opts2);
     try{ await worker.setParameters({ tessedit_pageseg_mode:'11', preserve_interword_spaces:'1' }); }catch(_){}
     setEngine('已就绪',true); return worker; }
   catch(e){ setEngine('引擎加载失败，可手动填写',false); throw e; }
